@@ -2,6 +2,16 @@
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
+// Managed Postgres (Neon/Render/RDS) requires SSL. Enable it when the target
+// looks managed or in production, but stay off for a plain local Postgres so
+// local dev doesn't break. Works whether connecting via DATABASE_URL
+// (?sslmode=require) or the individual DATABASE_* params.
+const connTarget = `${process.env.DATABASE_URL || ''}${process.env.DATABASE_HOST || ''}`;
+const needsSSL =
+  process.env.DATABASE_SSL === 'true' ||
+  process.env.NODE_ENV === 'production' ||
+  /sslmode=require|neon\.tech|\.render\.com|amazonaws/.test(connTarget);
+
 // Database connection options
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   host: process.env.DATABASE_HOST,
@@ -10,6 +20,7 @@ const sequelize = new Sequelize(process.env.DATABASE_URL, {
   username: process.env.DATABASE_USER,
   password: process.env.DATABASE_PASSWORD,
   dialect: 'postgres',
+  dialectOptions: needsSSL ? { ssl: { require: true, rejectUnauthorized: false } } : {},
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {
     max: 10,
@@ -31,15 +42,25 @@ const connectDB = async () => {
     await sequelize.authenticate();
     console.log('✅ PostgreSQL connection established successfully');
     console.log(`📦 Database: ${process.env.DATABASE_NAME}`);
-    console.log(`🏠 Host: ${process.env.DATABASE_HOST}:${process.env.DATABASE_PORT}`);
-    
-    // Sync database tables (be careful in production)
-    // Temporarily disabled due to model sync issues
-    // if (process.env.NODE_ENV === 'development') {
-    //   await sequelize.sync({ force: true });
-    //   console.log('🔄 Database tables synchronized with force');
-    // }
-    
+    console.log(`🏠 Host: ${process.env.DATABASE_HOST || '(from DATABASE_URL)'}`);
+
+    // One-time schema bootstrap for a fresh/empty database. Guarded by DB_SYNC so
+    // it NEVER runs in normal operation. Set DB_SYNC=true on the first boot
+    // against an empty DB to create missing tables, then remove the flag.
+    // create-only sync() (no alter/force) — never touches existing data.
+    if (process.env.DB_SYNC === 'true') {
+      await sequelize.sync();
+      console.log('🔄 Schema bootstrapped (created missing tables)');
+      // Seed a default super-admin so you can log in on a brand-new DB.
+      // ⚠️ CHANGE this password immediately after the first login.
+      try {
+        const Admin = require('../models/Admin');
+        await Admin.createDefaultAdmin();
+      } catch (e) {
+        console.warn('⚠️ default admin seed skipped:', e.message);
+      }
+    }
+
   } catch (error) {
     console.error('❌ PostgreSQL connection failed:', error);
     throw error;
