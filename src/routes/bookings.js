@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { body, query } = require("express-validator");
-const { adminAuth: protect } = require("../middleware/auth");
+const { adminAuth: protect, authorizeAdminRoute } = require("../middleware/auth");
 
 // Import booking functions from bookingController
 const {
@@ -69,8 +69,8 @@ router.post(
 );
 
 // ===== ADMIN BOOKING MANAGEMENT ROUTES =====
-// All admin routes require authentication
-router.use("/admin", protect);
+// All admin routes require authentication AND authorization (role/permission).
+router.use("/admin", protect, authorizeAdminRoute);
 
 // Get all bookings for admin management
 router.get(

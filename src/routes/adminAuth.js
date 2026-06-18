@@ -9,7 +9,7 @@ const {
   updateAdminProfile,
   changePassword
 } = require('../controllers/adminAuthController');
-const { adminAuth, requireRole } = require('../middleware/auth');
+const { adminAuth, requireRole, authorizeAdminRoute } = require('../middleware/auth');
 const { logUIInteraction } = require('../config/logger');
 const { Car } = require('../models');
 
@@ -257,6 +257,14 @@ router.put('/admin/change-password', adminAuth, changePassword);
  *       200:
  *         description: Cars retrieved successfully
  */
+// Authorization guard for the duplicate admin data routes below (/cars, /blogs,
+// /bookings, /dashboard). These mirror the canonical /api/admin/* endpoints
+// (admin.js) and are NOT used by either frontend; the guard ensures they can't be
+// a privilege-escalation path. Scoped by path so it never touches login, register,
+// profile, change-password, or log-navigation. (Safe to delete with these routes
+// once the old rental-front is retired at cutover.)
+router.use(["/cars", "/blogs", "/bookings", "/dashboard"], adminAuth, authorizeAdminRoute);
+
 router.get('/cars', adminAuth, async (req, res) => {
   const { page = 1, limit = 12 } = req.query;
   

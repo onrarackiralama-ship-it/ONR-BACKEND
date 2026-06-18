@@ -86,10 +86,67 @@ const requireRole = (...roles) => {
   };
 };
 
+// Declarative authorization for the admin router (see routes/admin.js).
+// `adminAuth`/`protect` only proves a valid, active token (authentication).
+// This middleware enforces WHAT that admin may do (authorization): it maps the
+// request's resource segment -> permission module and the HTTP method -> action,
+// then enforces req.admin.hasPermission(module, action). It FAILS CLOSED — any
+// route whose resource segment or method isn't mapped below is denied (403)
+// rather than implicitly allowed.
+const MODULE_BY_SEGMENT = {
+  dashboard: "bookings",        // read-only aggregate of booking/car stats
+  bookings: "bookings",
+  cars: "cars",
+  listings: "cars",             // public car listings; admin mutations reuse the cars module
+  transfers: "cars",            // transfers reuse the cars module (no dedicated module in the permission model yet)
+  news: "content",
+  blogs: "content",
+  locations: "locations",
+  database: "settings",         // DB monitoring is sensitive -> settings (super_admin only)
+  "exchange-rates": "settings",
+};
+
+const ACTION_BY_METHOD = {
+  GET: "read",
+  HEAD: "read",
+  POST: "create",
+  PUT: "update",
+  PATCH: "update",
+  DELETE: "delete",
+};
+
+const authorizeAdminRoute = (req, res, next) => {
+  if (!req.admin) {
+    return res.status(401).json({
+      error: "Authentication required",
+      message: "Please login first",
+    });
+  }
+
+  // Mount-agnostic: scan path segments for the first that maps to a module,
+  // so this works regardless of where the router is mounted.
+  const segment = req.path
+    .split("/")
+    .filter(Boolean)
+    .find((s) => MODULE_BY_SEGMENT[s]);
+  const permModule = segment ? MODULE_BY_SEGMENT[segment] : null;
+  const action = ACTION_BY_METHOD[req.method] || null;
+
+  if (!permModule || !action || !req.admin.hasPermission(permModule, action)) {
+    return res.status(403).json({
+      error: "Permission denied",
+      message: `You don't have permission to ${action || "access"} ${permModule || "this resource"}`,
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   adminAuth,
   requirePermission,
   requireRole,
+  authorizeAdminRoute,
   // Backward compatibility
   auth: adminAuth
 };

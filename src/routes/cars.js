@@ -35,6 +35,7 @@ const { upload } = require("../utils/cloudinary");
 const {
   adminAuth: protect,
   requireRole: restrictTo,
+  authorizeAdminRoute,
 } = require("../middleware/auth");
 
 const router = express.Router();
@@ -229,25 +230,29 @@ router.post("/:carId/toggle-like", protect, toggleCarLike);
 // Get all locations
 router.get("/locations", getLocations);
 
-// Protected routes (Admin only) - require authentication for admin operations
+// Protected routes (Admin only). These legacy /api/cars admin endpoints duplicate
+// /api/admin/cars (which the app actually uses) and were previously exposed with NO
+// authentication at all. Guard them with protect + authorizeAdminRoute so they can't
+// serve as an unauthenticated backdoor. Safe to delete once the old rental-front is
+// retired at cutover, since the app talks exclusively to /api/admin/cars.
 
-// Admin car management (simplified without complex validation for now)
-router.post("/", createAdminCar);
-router.put("/:id", updateAdminCar);
-router.delete("/:id", deleteAdminCar);
+// Admin car management
+router.post("/", protect, authorizeAdminRoute, createAdminCar);
+router.put("/:id", protect, authorizeAdminRoute, updateAdminCar);
+router.delete("/:id", protect, authorizeAdminRoute, deleteAdminCar);
 
-// Image management (simplified)
-router.post("/:id/images", upload.single("image"), uploadCarImages);
-router.delete("/:id/images/:imageId", deleteCarImage);
+// Image management
+router.post("/:id/images", protect, authorizeAdminRoute, upload.single("image"), uploadCarImages);
+router.delete("/:id/images/:imageId", protect, authorizeAdminRoute, deleteCarImage);
 
-// Status and order management (simplified)
-router.patch("/:id/status", updateCarStatus);
-router.patch("/:id/order", updateCarOrder);
-router.patch("/bulk", bulkUpdateCars);
+// Status and order management
+router.patch("/:id/status", protect, authorizeAdminRoute, updateCarStatus);
+router.patch("/:id/order", protect, authorizeAdminRoute, updateCarOrder);
+router.patch("/bulk", protect, authorizeAdminRoute, bulkUpdateCars);
 
 // Statistics and export
-router.get("/admin/stats", getCarStatistics);
-router.get("/admin/export", exportCars);
+router.get("/admin/stats", protect, authorizeAdminRoute, getCarStatistics);
+router.get("/admin/export", protect, authorizeAdminRoute, exportCars);
 
 // ===== ADVANCED ADMIN CAR ROUTES =====
 // All admin car management routes are fully functional and implemented

@@ -2,7 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { query, body } = require("express-validator");
-const { adminAuth: protect } = require("../middleware/auth");
+const { adminAuth: protect, authorizeAdminRoute } = require("../middleware/auth");
 
 // Import admin functions from various controllers
 const {
@@ -82,6 +82,11 @@ const {
 
 // Apply auth middleware to all admin routes
 router.use(protect);
+
+// Enforce per-resource authorization on every admin route. `protect` only proves
+// a valid token; authorizeAdminRoute enforces what the authenticated admin is
+// actually permitted to do (role/permission), and fails closed for unmapped routes.
+router.use(authorizeAdminRoute);
 
 // ===== DASHBOARD ROUTES =====
 

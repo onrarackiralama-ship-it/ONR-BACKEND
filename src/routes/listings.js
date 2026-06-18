@@ -10,7 +10,7 @@ const {
   getListingFilters
 } = require('../controllers/listingController');
 const { uploadConfigs, handleUploadError } = require('../middleware/upload');
-const { adminAuth } = require('../middleware/auth');
+const { adminAuth, authorizeAdminRoute } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -248,7 +248,7 @@ router.get('/:id', getListing);
  *       401:
  *         description: Unauthorized
  */
-router.post('/', adminAuth, uploadConfigs.mixed, createListing);
+router.post('/', adminAuth, authorizeAdminRoute, uploadConfigs.mixed, createListing);
 
 /**
  * @swagger
@@ -279,7 +279,7 @@ router.post('/', adminAuth, uploadConfigs.mixed, createListing);
  *       404:
  *         description: Listing not found
  */
-router.put('/:id', adminAuth, uploadConfigs.mixed, updateListing);
+router.put('/:id', adminAuth, authorizeAdminRoute, uploadConfigs.mixed, updateListing);
 
 /**
  * @swagger
@@ -306,7 +306,7 @@ router.put('/:id', adminAuth, uploadConfigs.mixed, updateListing);
  *       404:
  *         description: Listing not found
  */
-router.delete('/:id', adminAuth, deleteListing);
+router.delete('/:id', adminAuth, authorizeAdminRoute, deleteListing);
 
 // Error handling middleware
 router.use(handleUploadError);
