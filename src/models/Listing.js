@@ -228,15 +228,16 @@ const Listing = sequelize.define('Listing', {
   }
 }, {
   tableName: 'listings',
+  // index fields must be the real (snake_case) column names — see cars.js note
   indexes: [
-    { fields: ['userId'] },
+    { fields: ['user_id'] },
     { fields: ['status'] },
     { fields: ['featured'] },
     { fields: ['brand', 'model'] },
     { fields: ['category'] },
     { fields: ['slug'] },
-    { fields: ['"pricing"'], using: 'gin' }, // JSONB index
-    { fields: ['"images"'], using: 'gin' } // JSONB index
+    { fields: ['pricing'], using: 'gin' }, // JSONB index
+    { fields: ['images'], using: 'gin' } // JSONB index
   ],
   hooks: {
     beforeSave: async (listing) => {

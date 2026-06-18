@@ -62,10 +62,11 @@ const ExchangeRate = sequelize.define('ExchangeRate', {
   }
 }, {
   tableName: 'exchange_rates',
+  // index fields must be the real (snake_case) column names — see cars.js note
   indexes: [
-    { fields: ['baseCurrency'] },
-    { fields: ['isActive'] },
-    { fields: ['fetchedAt'] }
+    { fields: ['base_currency'] },
+    { fields: ['is_active'] },
+    { fields: ['fetched_at'] }
   ]
 });
 

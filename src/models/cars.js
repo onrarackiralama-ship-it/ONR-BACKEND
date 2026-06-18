@@ -306,17 +306,22 @@ const Car = sequelize.define(
   },
   {
     tableName: "cars",
+    // `underscored: true` (global define) maps camelCase attributes to
+    // snake_case columns, so index `fields` MUST use the real column names
+    // (user_id, seasonal_pricing, main_image). Sequelize does NOT snake-case
+    // index fields automatically — using the attribute name makes sync() emit
+    // CREATE INDEX ... ("userId") which fails with 42703 on a fresh DB.
     indexes: [
-      { fields: ["userId"] },
+      { fields: ["user_id"] },
       { fields: ["status"] },
       { fields: ["featured"] },
       { fields: ["brand", "model"] },
       { fields: ["category"] },
       { fields: ["slug"] },
-      { fields: ['"pricing"'], using: "gin" }, // JSONB index
-      { fields: ['"seasonalPricing"'], using: "gin" }, // JSONB index
-      { fields: ['"mainImage"'], using: "gin" }, // JSONB index
-      { fields: ['"gallery"'], using: "gin" }, // JSONB index
+      { fields: ["pricing"], using: "gin" }, // JSONB index
+      { fields: ["seasonal_pricing"], using: "gin" }, // JSONB index
+      { fields: ["main_image"], using: "gin" }, // JSONB index
+      { fields: ["gallery"], using: "gin" }, // JSONB index
     ],
     hooks: {
       beforeCreate: async (car) => {
