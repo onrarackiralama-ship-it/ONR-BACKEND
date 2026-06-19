@@ -2,7 +2,14 @@
 
 const express = require("express");
 const router = express.Router();
+const { adminAuth } = require("../middleware/auth");
 const { uploadConfigs, handleUploadError } = require("../middleware/upload");
+
+// All image upload/delete endpoints require an authenticated admin. These were
+// previously public, so anyone could push files into the Cloudinary account
+// (storage/cost abuse). The admin frontend already sends the Bearer token on
+// the shared axios instance, so the logged-in upload flow keeps working.
+router.use(adminAuth);
 const {
   uploadImage,
   uploadMultipleImages,

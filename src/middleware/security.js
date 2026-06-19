@@ -9,32 +9,55 @@ const validator = require("express-validator");
 const window = new JSDOM("").window;
 const purify = DOMPurify(window);
 
+// Fields whose value is intentionally rich HTML (rendered via set:html on the
+// public site — e.g. the blog post body). These get a WHITELIST sanitize that
+// keeps formatting but strips scripts/handlers, instead of the strip-all policy
+// applied to every other field. Strip-all here would (a) destroy WYSIWYG
+// formatting and (b) was the only thing incidentally preventing stored XSS —
+// this whitelist makes the protection explicit and intentional.
+const RICH_HTML_FIELDS = new Set(["content"]);
+
+const RICH_HTML_CONFIG = {
+  ALLOWED_TAGS: [
+    "p", "br", "hr", "span", "strong", "b", "em", "i", "u", "s",
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "ul", "ol", "li", "blockquote", "code", "pre", "a", "img",
+  ],
+  ALLOWED_ATTR: ["href", "title", "target", "rel", "src", "alt"],
+  // Belt-and-suspenders on top of the tag/attr whitelist (DOMPurify also blocks
+  // javascript:/data: script URIs by default):
+  FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input"],
+  FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "style"],
+};
+
+const STRICT_CONFIG = { ALLOWED_TAGS: [], ALLOWED_ATTR: [] };
+
 /**
  * Input Sanitization Middleware
  * Sanitizes all string inputs to prevent XSS attacks
  */
 const sanitizeInput = (req, res, next) => {
   try {
-    // Helper function to recursively sanitize object properties
-    const sanitizeObject = (obj) => {
+    // Recursively sanitize. `key` is the property name this string came from,
+    // so rich-HTML fields (RICH_HTML_FIELDS) get a formatting-preserving
+    // whitelist while every other string is stripped of all markup.
+    const sanitizeObject = (obj, key) => {
       if (obj === null || obj === undefined) return obj;
 
       if (typeof obj === "string") {
-        // Sanitize HTML tags and scripts
-        return purify.sanitize(obj, {
-          ALLOWED_TAGS: [], // No HTML tags allowed
-          ALLOWED_ATTR: [], // No attributes allowed
-        });
+        const cfg =
+          key && RICH_HTML_FIELDS.has(key) ? RICH_HTML_CONFIG : STRICT_CONFIG;
+        return purify.sanitize(obj, cfg);
       }
 
       if (Array.isArray(obj)) {
-        return obj.map(sanitizeObject);
+        return obj.map((v) => sanitizeObject(v, key));
       }
 
       if (typeof obj === "object") {
         const sanitized = {};
-        for (const [key, value] of Object.entries(obj)) {
-          sanitized[key] = sanitizeObject(value);
+        for (const [k, value] of Object.entries(obj)) {
+          sanitized[k] = sanitizeObject(value, k);
         }
         return sanitized;
       }
