@@ -136,6 +136,24 @@ app.use("/api/admin", rateLimits.admin); // Moderate rate limiting for admin
 app.use("/api/images", rateLimits.upload); // Strict rate limiting for uploads
 app.use("/api/bookings", rateLimits.booking); // Strict rate limiting for bookings
 
+// After a successful admin content mutation (cars/blogs/transfers), queue a
+// rebuild of the STATIC frontend so the change goes live. No-op unless
+// VERCEL_DEPLOY_HOOK_URL is configured (see src/utils/triggerRebuild.js).
+const { triggerRebuild } = require("./src/utils/triggerRebuild");
+app.use((req, res, next) => {
+  const mutating =
+    req.method === "POST" ||
+    req.method === "PUT" ||
+    req.method === "PATCH" ||
+    req.method === "DELETE";
+  if (mutating && /\/(cars|listings|blogs|news|transfers)(\/|$)/.test(req.path)) {
+    res.on("finish", () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) triggerRebuild();
+    });
+  }
+  next();
+});
+
 // API Routes - PostgreSQL routes
 app.use("/api/listings", listingRoutes);
 app.use("/api/images", imageUploadRoutes);
