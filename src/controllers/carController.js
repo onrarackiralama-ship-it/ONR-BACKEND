@@ -250,7 +250,12 @@ exports.exportCars = async (req, res) => {
 // @access  Private/Admin
 exports.createCar = async (req, res) => {
   try {
-    const car = new Car(req.body);
+    const carData = { ...req.body };
+    // Mass-assignment guard: identity/audit columns can't be set from the body.
+    ["id", "user_id", "userId", "createdAt", "updatedAt", "created_at", "updated_at"].forEach(
+      (f) => delete carData[f]
+    );
+    const car = new Car(carData);
     await car.save();
 
     res.status(201).json({
@@ -1743,6 +1748,10 @@ const updateAdminCar = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
+    // Mass-assignment guard: never let identity/audit columns be set from the body.
+    ["id", "user_id", "userId", "createdAt", "updatedAt", "created_at", "updated_at"].forEach(
+      (f) => delete updateData[f]
+    );
 
     console.log("🔄 Updating car:", id, "with data:", updateData);
 

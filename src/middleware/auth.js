@@ -15,7 +15,12 @@ const adminAuth = async (req, res, next) => {
     }
 
     const token = authHeader.substring(7);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Pin the algorithm so a token can't be presented with a different `alg`
+    // (e.g. alg:none or HS/RS confusion). jsonwebtoken v9 mitigates most of this
+    // by default; pinning makes the intent explicit and future-proof.
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ["HS256"],
+    });
     
     const admin = await Admin.findByPk(decoded.id);
     if (!admin || !admin.isActive) {

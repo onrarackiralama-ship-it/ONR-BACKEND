@@ -65,8 +65,10 @@ app.use(
 );
 
 // Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// JSON/urlencoded bodies are small (file uploads go through multer, not here);
+// a tight limit shrinks the body-parser DoS surface. Bump per-route if ever needed.
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 // Add JSON error handler after body parser
 app.use(jsonErrorHandler);

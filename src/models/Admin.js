@@ -280,12 +280,23 @@ Admin.createDefaultAdmin = async function () {
     const adminCount = await this.count();
 
     if (adminCount === 0) {
+      // No hardcoded default password. The first admin is seeded only when
+      // ADMIN_SEED_PASSWORD is provided; otherwise seeding is skipped so we never
+      // create a known-credential super_admin.
+      const seedPassword = process.env.ADMIN_SEED_PASSWORD;
+      if (!seedPassword) {
+        console.warn(
+          "⚠️  No admins exist and ADMIN_SEED_PASSWORD is not set — skipping default admin seed."
+        );
+        return null;
+      }
+
       console.log("🔄 Creating default admin user...");
 
       const defaultAdmin = await this.create({
-        username: "admin",
-        email: "admin@mitcarrental.com",
-        password: "admin123",
+        username: process.env.ADMIN_SEED_USERNAME || "admin",
+        email: process.env.ADMIN_SEED_EMAIL || "admin@onrcarrental.com",
+        password: seedPassword,
         firstName: "System",
         lastName: "Administrator",
         role: "super_admin",
@@ -319,11 +330,9 @@ Admin.createDefaultAdmin = async function () {
         ],
       });
 
-      console.log("✅ Default admin created successfully!");
-      console.log("📋 Login credentials:");
-      console.log("   Username: admin");
-      console.log("   Password: admin123");
-      console.log("   Email: admin@mitcarrental.com");
+      console.log(
+        `✅ Default admin created (username: ${defaultAdmin.username}). Password set from ADMIN_SEED_PASSWORD.`
+      );
 
       return defaultAdmin;
     }

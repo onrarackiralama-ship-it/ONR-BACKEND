@@ -442,6 +442,10 @@ const updateListing = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = { ...req.body };
+    // Mass-assignment guard: never let identity/audit columns be set from the body.
+    ["id", "user_id", "userId", "createdAt", "updatedAt", "created_at", "updated_at"].forEach(
+      (f) => delete updateData[f]
+    );
 
     // Find listing
     const listing = await Listing.findByPk(id);
