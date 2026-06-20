@@ -56,6 +56,8 @@ app.use(
       /\.onrender\.com$/, // tüm render.com subdomainleri
             'https://mitcarrental.com',
       'https://www.mitcarrental.com',
+      'https://onrcarrental.com',
+      'https://www.onrcarrental.com',
 
     ],
     credentials: true,
