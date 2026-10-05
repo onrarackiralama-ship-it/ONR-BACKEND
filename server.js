@@ -58,6 +58,9 @@ app.use(
       'https://www.mitcarrental.com',
       'https://onrcarrental.com',
       'https://www.onrcarrental.com',
+      // antalyaaraçkiralama.com — tarayıcı Origin başlığını punycode gönderir
+      'https://xn--antalyaarakiralama-hvb.com',
+      'https://www.xn--antalyaarakiralama-hvb.com',
 
     ],
     credentials: true,
